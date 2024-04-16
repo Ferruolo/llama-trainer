@@ -28,7 +28,8 @@ def distributed_trainer(
 
     # Kinda a hacky implementation of message passing
     # but its what we got here
-    # Channels are indexed by device number. First channel
+    # Channels are indexed by device number. First channel is for sending things
+    # to device, second channel
     synchronizer = list()
 
     threads = list()

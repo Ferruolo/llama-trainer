@@ -1,4 +1,5 @@
 import csv
+import random
 
 INPUT_START_LABEL = "[ISTART]"
 INPUT_END_LABEL = "[IEND]"
@@ -29,3 +30,7 @@ def load_grammar_data(filepath: str, processor) -> list:
 
 def get_grammar_len(datastore):
     return len(datastore)
+
+
+def shuffle_dataset(data_list):
+    random.shuffle(data_list)
