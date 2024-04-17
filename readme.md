@@ -15,5 +15,7 @@ Trying to make this as flexible/simple as possible for reuse
 
 
 
+## Model Syncing Process:
+Let $OPT$
 
 

@@ -2,19 +2,40 @@ import torch
 from torch import cuda
 from multiprocessing import Process, Queue
 from torch.utils.data import DataLoader
+from enums import sync_enums
 
 
 # Adapting a similar approach to the end goal
 # for Stainless!
+def mapper(iterator, accumulator, idx, func):
+    if idx < len(iterator):
+        # Tail recursion is its own reward
+        return mapper(iterator, accumulator + func(iterator[idx]), idx, func)
+    else:
+        return accumulator
 
-def create_interfaces(synchronizer: [(Queue, Queue)], idx: int):
+
+def create_getters(synchronizer: [Queue], idx: int):
     def getter():
         return synchronizer[idx][0].get()
 
-    def setter(item):
-        synchronizer[idx][1].put(item)
+    return getter
 
-    return getter, setter
+
+def create_setter(mailbox: Queue):
+    return lambda x: mailbox.put(x)
+
+
+def send_to_all(synchronizer: [Queue], item):
+    for q in synchronizer:
+        q.put(item)
+
+
+def get_from_all(synchronizer: [Queue]):
+    responses = list()
+    for item in synchronizer:
+        responses.append(item.get())
+    return responses
 
 
 def distributed_trainer(
@@ -29,22 +50,17 @@ def distributed_trainer(
     # Kinda a hacky implementation of message passing
     # but its what we got here
     # Channels are indexed by device number. First channel is for sending things
-    # to device, second channel
+    # to device, second channel is for receiving things from device
     synchronizer = list()
-
+    mailbox = Queue()
     threads = list()
+    setter = create_setter(mailbox)
 
-
-    device_batch_size = training_config.batch_size
-    total_batch_size = training_config.batch_size
-
-    train_loader = DataLoader(training_set, batch_size=training_config.batch_size * 4)
-    test_loader = DataLoader(test_set, batch_size=training_config.batch_size * 4)
-
+    # initialize data
+    ### Make this use functional programming
     for i in range(cuda.device_count()):
-        synchronizer.append((Queue(), Queue()))
-        (getter, setter) = create_interfaces(synchronizer, i)
-
+        synchronizer.append((Queue()))
+        getter = create_getters(synchronizer, i)
         training_process = Process(target=training_func, args=(
             model_list[i],
             i,
@@ -55,49 +71,19 @@ def distributed_trainer(
         training_process.start()
         threads.append(training_process)
 
-    total_loss = 0
     for epoch in range(training_config.num_epochs):
         print(f"Training Epoch number {epoch}")
         epoch_loss = 0
+        send_to_all(synchronizer, sync_enums.continue_training)
+
+        ## Gradient Syncing Here
+
+        (device_epoch_losses, device_val_losses) = get_from_all(synchronizer)
+        epoch_loss = sum(device_epoch_losses)
+        val_loss = sum(device_val_losses)
 
 
 
-
-
-
-
-
-        for i in range(cuda.device_count()):
-            train_loader = DataLoader(training_set, batch_size=training_config.batch_size, shuffle=True)
-            setter((train_loader, True))  # True indicates training mode
-
-            # Receive and accumulate the loss from the process
-            loss = getter()
-            epoch_loss += loss
-
-        total_loss += epoch_loss / cuda.device_count()
-        print(f"Epoch {epoch} loss: {epoch_loss / cuda.device_count()}")
-
-    # Evaluate the models on the test set
-    for i in range(cuda.device_count()):
-        (getter, setter) = create_interfaces(synchronizer, i)
-        test_loader = DataLoader(test_set, batch_size=training_config.batch_size, shuffle=False)
-        setter((test_loader, False))  # False indicates evaluation mode
-
-        # Receive and accumulate the test loss from the process
-        test_loss = getter()
-        total_loss += test_loss
-
-    print(f"Total loss: {total_loss / cuda.device_count()}")
-
-    # Terminate the processes
-    for i in range(cuda.device_count()):
-        (getter, setter) = create_interfaces(synchronizer, i)
-        setter(None)  # Send a signal to terminate the process
-
-    for process in threads:
-        process.join()
-
-    print("======Training Complete=======")
+    send_to_all(synchronizer, sync_enums.stop)
 
 # This is an example training function that should be replaced with your actual training logic

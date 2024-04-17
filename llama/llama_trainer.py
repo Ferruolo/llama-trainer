@@ -1,6 +1,9 @@
 from torch import optim
-import torch
 from torch.nn import CrossEntropyLoss
+from llama_datasets.dataset_interface import distributed_dataloader as dataloader
+from llama import Transformer as llama_model # Import type for analyzer
+from enums import sync_enums
+
 
 
 class TrainerArgs:
@@ -11,34 +14,51 @@ class TrainerArgs:
     num_epochs = 5
 
 
-def example_training_func(model, device_id, getter, setter, training_config: TrainerArgs):
+# like a lion tamer, but for llamas
+def llama_tamer(
+        model: llama_model,
+        device_id,
+        getter,
+        setter,
+        training_config: TrainerArgs,
+        training_dataloader: dataloader,
+        test_dataloader: dataloader):
+
     model.cuda(device_id)
     optimizer = training_config.optimizer(model.parameters(), lr=training_config.learning_rate)
     loss_func = training_config.loss_func()
 
-
-    for epoch in range(training_config.num_epochs):
-        (x, y_true), is_training,  = getter()
-        if is_training is False:
+    while True:
+        continue_training = getter()
+        if continue_training is not sync_enums.stop:
             break
 
         epoch_loss = 0
+        next_batch = training_dataloader.get_next_batch(device_id)
+        model.train()
+        # I wish I was in rust, or ocaml, or some other functional language
+        while next_batch is not None:
+            optimizer.zero_grad()
+            (x, y_true) = next_batch
 
-        ### too slow to do this every time
-        x, y_true = x.cuda(device_id), y_true.cuda(device_id)
-
-
-
-        optimizer.zero_grad()
-        output = model(x)
-        loss = loss_func(output, y_true)
-        if is_training:
+            y_pred = model.forward(next_batch, 0)
+            loss = loss_func(y_pred, y_true)
             loss.backward()
-            optimizer.step()
-        epoch_loss += loss.item()
 
-        if is_training:
-            setter(epoch_loss / len(train_loader))
-        else:
-            setter(epoch_loss / len(train_loader))
+            # Sync Gradients here (unless we can sync this more efficiently)!!!!
+            while
+
+
+            optimizer.step()
+            epoch_loss += loss.item()
+            model.eval()
+
+        setter(sync_enums.completed_epoch)
+
+        (x_test, y_test) = test_dataloader.get_full(device_id)
+        y_pred = model.forward(x_test, 0)
+        val_loss = loss_func(y_pred, y_test)
+
+        setter(val_loss)
+
     return model

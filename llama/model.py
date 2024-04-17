@@ -388,6 +388,8 @@ class Transformer(nn.Module):
         """
         super().__init__()
         self.params = params
+        if params.vocab_size < 0:
+            raise ValueError("Vocab Size was not set")
         self.vocab_size = params.vocab_size
         self.n_layers = params.n_layers
         self.location = location
@@ -409,6 +411,10 @@ class Transformer(nn.Module):
         )
 
     def load(self, state_dict: dict):
+        ## This is what happens when you have to
+        ## Prototype on a memory-poor device
+
+
         ## Proceeds to write horrible code
         # TODO: refactor whatever the fuck this is
         # If you're reading this, pls don't judge me

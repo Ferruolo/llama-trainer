@@ -91,8 +91,10 @@ class distributed_dataloader:
     def get_next_batch(self, gpu_idx):
         # Implement me:
         # This function gets the next batch for a certain GPU
-        item = self.gpu_store[gpu_idx].pop()
-        return item
+        if len(self.gpu_store[gpu_idx]) > 0:
+            return self.gpu_store[gpu_idx].pop()
+        else:
+            return None
 
     def get_item(self, index) -> [int]:
         (input_, target_) = self.getter(self.datastore, index)
@@ -110,6 +112,11 @@ class distributed_dataloader:
         while len(item) < max_len:
             item.append(self.tokenizer.pad_id)
         return item
+
+    def get_full(self, device_id):
+        ## Coming back to this later
+        return (torch.tensor(), torch.tensor())
+
 
 
 def get_dataset(dataset_name, tokenizer, batch_size):

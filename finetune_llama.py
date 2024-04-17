@@ -24,6 +24,7 @@ def main(model_path=MODEL_PATH,
          num_epochs=NUM_EPOCHS,
          dataset_name=DATASET_NAME
          ):
+
     if not cuda.is_available():
         print("Requires Cuda")
         exit(1)
@@ -45,6 +46,8 @@ def main(model_path=MODEL_PATH,
         llama = Transformer(model_args, device_num)
         llama.load(weights)
         models.append(llama)
+
+
     (train, val) = get_dataset(dataset_name, tokenizer)
 
 
