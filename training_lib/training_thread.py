@@ -5,7 +5,6 @@ from training_lib.synchronizer import Synchronizer, sync_enums
 from training_lib.gradient_updates import gradient_update
 
 
-# like a lion tamer, but for llamas
 def training_thread(
         model: llama_model,
         device_id,
@@ -14,7 +13,6 @@ def training_thread(
         test_dataloader: dataloader,
         synchronizer: Synchronizer
 ):
-
     model.cuda(device_id)
     optimizer = training_config.optimizer(model.parameters(), lr=training_config.learning_rate)
     loss_func = training_config.loss_func()

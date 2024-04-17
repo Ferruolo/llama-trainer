@@ -1,15 +1,20 @@
-from llama.model import Transformer, ModelArgs
-from llama.tokenizer import Tokenizer
-from llama_datasets.dataset_interface import get_dataset
 import json
 import torch
 from torch import cuda
 import fire
 
+from configure.config import ModelArgs, TrainerArgs
+from llama.tokenizer import Tokenizer
+from llama_datasets.dataset_interface import get_dataset
+from training_lib.distributed_trainer import distributed_trainer
+from llama import Transformer
+
 MODEL_PATH = "./models/llama-7b-original/consolidated.00.pth"
 PARAMS_PATH = "./models/llama-7b-original/params.json"
 TOKENIZER_PATH = "./models/llama-7b-original/tokenizer.model"
 DATASET_NAME = "grammar"
+SAVE_PATH = "./models/finetuned.pth"
+
 
 BATCH_SIZE = 10
 MAX_SEQ_LEN = 15
@@ -22,7 +27,8 @@ def main(model_path=MODEL_PATH,
          batch_size=BATCH_SIZE,
          max_seq_len=MAX_SEQ_LEN,
          num_epochs=NUM_EPOCHS,
-         dataset_name=DATASET_NAME
+         dataset_name=DATASET_NAME,
+         save_path=SAVE_PATH
          ):
 
     if not cuda.is_available():
@@ -37,18 +43,18 @@ def main(model_path=MODEL_PATH,
             **params
         )
 
+    training_config = TrainerArgs()
     tokenizer = Tokenizer(tokenizer_path)
     model_args.vocab_size = tokenizer.n_words
 
-    models = list()
-    for device_num in range(cuda.device_count()):
-        weights = torch.load(model_path)
-        llama = Transformer(model_args, device_num)
-        llama.load(weights)
-        models.append(llama)
 
-
-    (train, val) = get_dataset(dataset_name, tokenizer)
+    weights = torch.load(model_path)
+    llama = Transformer(model_args, 0)
+    llama.load(weights)
+    (train, val) = get_dataset(dataset_name, tokenizer, batch_size=training_config.batch_size)
+    llama = distributed_trainer(llama, training_config, train, val)
+    llama = llama.to('cpu')
+    torch.save(llama.state_dict(), save_path)
 
 
 if __name__ == "__main__":

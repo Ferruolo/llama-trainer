@@ -52,6 +52,7 @@ class distributed_dataloader:
     def shuffle(self):
         self._shuffle(self.datastore)
 
+
     def prep_next_epoch(self):
         self.shuffle()
         items_per_gpu = self.len() // cuda.device_count()
@@ -79,9 +80,9 @@ class distributed_dataloader:
                     batch_x = [self.pad(item, max_len_x) for item in batch_x]
                     batch_y = [self.pad(item, max_len_y) for item in batch_y]
 
-
-                    tensor_x = torch.Tensor(batch_x).cuda(gpu_num)
-                    tensor_y = torch.Tensor(batch_y).cuda(gpu_num)
+                    device = torch.device(gpu_num)
+                    tensor_x = torch.tensor(batch_x, dtype=torch.bfloat16).cuda(device)
+                    tensor_y = torch.tensor(batch_y, dtype=torch.bfloat16).cuda(device)
                     batch.append((tensor_x, tensor_y))
                     batch_x, batch_y = list(), list()
                     batch_index = 0
@@ -114,8 +115,24 @@ class distributed_dataloader:
         return item
 
     def get_full(self, device_id):
-        ## Coming back to this later
-        return (torch.tensor(), torch.tensor())
+        device = torch.device(device_id)
+        self.shuffle()
+        inputs = list()
+        outputs = list()
+        max_len_inputs = 0
+        max_len_outputs = 0
+        for i in range(self.get_len(self.datastore)):
+            (x, y) = self.get_item(i)
+            max_len_inputs = max(max_len_inputs, len(x))
+            max_len_outputs= max(max_len_outputs, len(y))
+            inputs.append(x)
+            outputs.append(y)
+
+        inputs = [self.pad(item, max_len_inputs) for item in inputs]
+        outputs = [self.pad(item, max_len_outputs) for item in outputs]
+        tensor_x = torch.tensor(inputs, dtype=torch.bfloat16, device=device)
+        tensor_y = torch.tensor(outputs, dtype=torch.bfloat16, device=device)
+        return tensor_x, tensor_y
 
 
 

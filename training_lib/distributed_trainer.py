@@ -5,6 +5,7 @@ from multiprocessing import Process
 from training_lib.synchronizer import Synchronizer, sync_enums
 from training_lib.training_thread import training_thread
 
+
 # Adapting a similar approach to the end goal
 # for Stainless!
 def distributed_trainer(
@@ -43,12 +44,9 @@ def distributed_trainer(
         (device_epoch_losses, device_val_losses) = synchronizer.host_receive()
         epoch_loss = sum(device_epoch_losses)
         val_loss = sum(device_val_losses)
+        print(f"Epoch Loss: {epoch_loss: .05f} | Validation Loss: {val_loss: .05f}")
 
     synchronizer.send_to_all(sync_enums.stop)
     return models[0]
-
-
-
-
 
 # This is an example training function that should be replaced with your actual training logic
