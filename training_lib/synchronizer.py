@@ -1,4 +1,4 @@
-from multiprocessing import Queue
+from torch.multiprocessing import Queue
 from enum import Enum
 from utils import repeat_n_times, mapper
 ### I wanted to use a functional programming approach to this

@@ -6,8 +6,8 @@ from training_lib.gradient_updates import gradient_update
 
 
 def training_thread(
-        model: llama_model,
         device_id,
+        model: llama_model,
         training_config: TrainerArgs,
         training_dataloader: dataloader,
         test_dataloader: dataloader,
@@ -15,7 +15,7 @@ def training_thread(
 ):
     model.cuda(device_id)
     optimizer = training_config.optimizer(model.parameters(), lr=training_config.learning_rate)
-    loss_func = training_config.loss_func()
+    loss_func = training_config.loss_func
 
     while synchronizer.await_receive(device_id) is not sync_enums.stop:
 
