@@ -24,7 +24,7 @@ def distributed_trainer(
     for i in range(cuda.device_count()):
         print(f"Initiating Process #{i}") 
         model_clone = copy.deepcopy(model)
-        model_clone = model_clone.cuda(cuda.device(i))
+        model_clone = model_clone.cuda(torch.device(i))
         print("Model Cloned")
         models.append(model_clone)
         training_process = Process(target=training_thread, args=(
