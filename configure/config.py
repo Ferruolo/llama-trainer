@@ -10,7 +10,7 @@ class TrainerArgs:
     optimizer = Adam
     loss_func = F
     num_epochs = 5
-    batch_size = 10
+    batch_size = 1
 
 
 @dataclass

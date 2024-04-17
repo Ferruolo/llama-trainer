@@ -34,7 +34,7 @@ def main(model_path=MODEL_PATH,
     if not cuda.is_available():
         print("Requires Cuda")
         exit(1)
-
+    print("Cuda Available: Commencing Training")
     with open(params_path, 'r') as f:
         params = json.load(f)
         model_args = ModelArgs(
@@ -42,16 +42,17 @@ def main(model_path=MODEL_PATH,
             max_batch_size=BATCH_SIZE,
             **params
         )
-
     training_config = TrainerArgs()
     tokenizer = Tokenizer(tokenizer_path)
     model_args.vocab_size = tokenizer.n_words
-
+    print("Accessories Loaded")
 
     weights = torch.load(model_path)
     llama = Transformer(model_args, 0)
     llama.load(weights)
+    print("Model Loaded")
     (train, val) = get_dataset(dataset_name, tokenizer, batch_size=training_config.batch_size)
+    print("Data Loaded")
     llama = distributed_trainer(llama, training_config, train, val)
     llama = llama.to('cpu')
     torch.save(llama.state_dict(), save_path)
