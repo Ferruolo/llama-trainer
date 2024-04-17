@@ -13,9 +13,3 @@ Trying to make this as flexible/simple as possible for reuse
 - Setup LORAs
 - Make sure that I'm syncing weights right
 
-
-
-## Model Syncing Process:
-Let $OPT$
-
-
