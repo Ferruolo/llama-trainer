@@ -1,11 +1,9 @@
 import copy
 import torch
 from torch import cuda
-# from multiprocessing import Process
 from training_lib.synchronizer import Synchronizer, sync_enums
 from training_lib.training_thread import training_thread
-import torch.multiprocessing as mp
-from torch.multiprocessing import set_start_method
+from torch.multiprocessing import set_start_method, Process
 
 # Adapting a similar approach to the end goal
 # for Stainless!
@@ -26,10 +24,11 @@ def distributed_trainer(
     for i in range(cuda.device_count()):
         print(f"Initiating Process #{i}") 
         model_clone = copy.deepcopy(model)
+        model_clone = model_clone.cuda(cuda.device(i))
         print("Model Cloned")
         models.append(model_clone)
-        training_process = mp.Process(training_thread, group=None, args=(
-            model_clone.cuda(i),
+        training_process = Process(target=training_thread, args=(
+            model_clone,
             training_config,
             training_dataloader,
             test_dataloader,
