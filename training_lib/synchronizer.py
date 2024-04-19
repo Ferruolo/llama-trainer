@@ -12,7 +12,6 @@ def wait_for_it(channel: Queue, idx):
     print(f"waiting for channel {idx}")
     while channel.empty():
         continue
-    print(f"HERE on channel {idx}")
     print(f"Queue size for channel {idx} is {channel.qsize()}")
 
 
